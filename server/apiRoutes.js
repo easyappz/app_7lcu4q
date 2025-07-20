@@ -28,14 +28,20 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email }).catch(err => {
+      console.error('Database error during user check:', err);
+      throw new Error('Database operation failed');
+    });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
     const hashedPassword = await hashPassword(password);
     const user = new User({ email, password: hashedPassword });
-    await user.save();
+    await user.save().catch(err => {
+      console.error('Database error during user save:', err);
+      throw new Error('Database operation failed');
+    });
 
     const token = generateToken(user._id);
     res.status(201).json({ token, user: { id: user._id, email: user.email, points: user.points } });
@@ -53,16 +59,27 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const user = await User.findOne({ email });
+    console.log('Login attempt for email:', email);
+    const user = await User.findOne({ email }).catch(err => {
+      console.error('Database error during user lookup:', err);
+      throw new Error('Database operation failed');
+    });
     if (!user) {
+      console.log('User not found for email:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const isMatch = await comparePassword(password, user.password);
+    console.log('User found, comparing passwords for:', email);
+    const isMatch = await comparePassword(password, user.password).catch(err => {
+      console.error('Error comparing passwords:', err);
+      throw new Error('Password comparison failed');
+    });
     if (!isMatch) {
+      console.log('Password mismatch for email:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    console.log('Login successful for:', email);
     const token = generateToken(user._id);
     res.json({ token, user: { id: user._id, email: user.email, points: user.points } });
   } catch (error) {
@@ -79,7 +96,10 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).catch(err => {
+      console.error('Database error during forgot password:', err);
+      throw new Error('Database operation failed');
+    });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -110,7 +130,10 @@ router.post('/photos/upload', authMiddleware, uploadMiddleware.single('photo'), 
       gender,
       age: parseInt(age, 10)
     });
-    await photo.save();
+    await photo.save().catch(err => {
+      console.error('Database error during photo save:', err);
+      throw new Error('Database operation failed');
+    });
 
     res.status(201).json({ photo });
   } catch (error) {
@@ -135,7 +158,10 @@ router.get('/photos/to-rate', authMiddleware, async (req, res) => {
       query.age = { $gte: parseInt(minAge, 10), $lte: parseInt(maxAge, 10) };
     }
 
-    const photos = await Photo.find(query).limit(1);
+    const photos = await Photo.find(query).limit(1).catch(err => {
+      console.error('Database error during photo fetch:', err);
+      throw new Error('Database operation failed');
+    });
     res.json({ photos });
   } catch (error) {
     console.error('Fetch photos error:', error);
@@ -151,7 +177,10 @@ router.post('/photos/rate', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Photo ID is required' });
     }
 
-    const photo = await Photo.findById(photoId);
+    const photo = await Photo.findById(photoId).catch(err => {
+      console.error('Database error during photo lookup:', err);
+      throw new Error('Database operation failed');
+    });
     if (!photo) {
       return res.status(404).json({ message: 'Photo not found' });
     }
@@ -160,18 +189,30 @@ router.post('/photos/rate', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Cannot rate your own photo' });
     }
 
-    const existingRating = await Rating.findOne({ photoId, raterId: req.user.id });
+    const existingRating = await Rating.findOne({ photoId, raterId: req.user.id }).catch(err => {
+      console.error('Database error during rating check:', err);
+      throw new Error('Database operation failed');
+    });
     if (existingRating) {
       return res.status(400).json({ message: 'You have already rated this photo' });
     }
 
     // Add rating
     const rating = new Rating({ photoId, raterId: req.user.id });
-    await rating.save();
+    await rating.save().catch(err => {
+      console.error('Database error during rating save:', err);
+      throw new Error('Database operation failed');
+    });
 
     // Update points: +1 for rater, -1 for photo owner
-    await User.findByIdAndUpdate(req.user.id, { $inc: { points: 1 } });
-    await User.findByIdAndUpdate(photo.userId, { $inc: { points: -1 } });
+    await User.findByIdAndUpdate(req.user.id, { $inc: { points: 1 } }).catch(err => {
+      console.error('Database error during rater points update:', err);
+      throw new Error('Database operation failed');
+    });
+    await User.findByIdAndUpdate(photo.userId, { $inc: { points: -1 } }).catch(err => {
+      console.error('Database error during owner points update:', err);
+      throw new Error('Database operation failed');
+    });
 
     res.json({ message: 'Photo rated successfully' });
   } catch (error) {
@@ -188,18 +229,27 @@ router.post('/photos/toggle-active', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Photo ID is required' });
     }
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).catch(err => {
+      console.error('Database error during user lookup:', err);
+      throw new Error('Database operation failed');
+    });
     if (user.points <= 0 && isActive) {
       return res.status(400).json({ message: 'Not enough points to activate photo' });
     }
 
-    const photo = await Photo.findOne({ _id: photoId, userId: req.user.id });
+    const photo = await Photo.findOne({ _id: photoId, userId: req.user.id }).catch(err => {
+      console.error('Database error during photo lookup:', err);
+      throw new Error('Database operation failed');
+    });
     if (!photo) {
       return res.status(404).json({ message: 'Photo not found or not owned by user' });
     }
 
     photo.isActive = isActive;
-    await photo.save();
+    await photo.save().catch(err => {
+      console.error('Database error during photo update:', err);
+      throw new Error('Database operation failed');
+    });
 
     res.json({ message: 'Photo status updated', photo });
   } catch (error) {
@@ -211,7 +261,10 @@ router.post('/photos/toggle-active', authMiddleware, async (req, res) => {
 // GET /api/photos/my-photos - Get user's photos
 router.get('/photos/my-photos', authMiddleware, async (req, res) => {
   try {
-    const photos = await Photo.find({ userId: req.user.id });
+    const photos = await Photo.find({ userId: req.user.id }).catch(err => {
+      console.error('Database error during user photos fetch:', err);
+      throw new Error('Database operation failed');
+    });
     res.json({ photos });
   } catch (error) {
     console.error('Fetch user photos error:', error);
@@ -223,12 +276,18 @@ router.get('/photos/my-photos', authMiddleware, async (req, res) => {
 router.get('/stats/photo/:id', authMiddleware, async (req, res) => {
   try {
     const photoId = req.params.id;
-    const photo = await Photo.findOne({ _id: photoId, userId: req.user.id });
+    const photo = await Photo.findOne({ _id: photoId, userId: req.user.id }).catch(err => {
+      console.error('Database error during photo lookup:', err);
+      throw new Error('Database operation failed');
+    });
     if (!photo) {
       return res.status(404).json({ message: 'Photo not found or not owned by user' });
     }
 
-    const ratings = await Rating.find({ photoId }).populate('raterId');
+    const ratings = await Rating.find({ photoId }).populate('raterId').catch(err => {
+      console.error('Database error during ratings fetch:', err);
+      throw new Error('Database operation failed');
+    });
     const stats = {
       total: ratings.length,
       byGender: { male: 0, female: 0, other: 0 },
@@ -236,7 +295,10 @@ router.get('/stats/photo/:id', authMiddleware, async (req, res) => {
     };
 
     for (const rating of ratings) {
-      const raterPhoto = await Photo.findOne({ userId: rating.raterId._id });
+      const raterPhoto = await Photo.findOne({ userId: rating.raterId._id }).catch(err => {
+        console.error('Database error during rater photo lookup:', err);
+        return null;
+      });
       if (raterPhoto) {
         stats.byGender[raterPhoto.gender]++;
         if (raterPhoto.age < 20) stats.byAge.under20++;

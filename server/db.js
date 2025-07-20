@@ -18,7 +18,8 @@ const mongoDb = mongoose.connect(MONGO_URI, {
   })
   .catch((err) => {
     console.error('MongoDB connection error:', err);
-    throw err;
+    // Do not throw error to allow server to start even if DB connection fails
+    return mongoose.connection;
   });
 
 module.exports = {
