@@ -16,16 +16,32 @@ export const AuthProvider = ({ children }) => {
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('token');
     if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+      }
     }
     setLoading(false);
   }, []);
 
   // Login function to update user and save to localStorage
   const login = (userData, token) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('token', token);
+    if (!userData || !token) {
+      console.error('Invalid login data or token');
+      return false;
+    }
+    try {
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('token', token);
+      return true;
+    } catch (error) {
+      console.error('Error during login:', error);
+      return false;
+    }
   };
 
   // Logout function to clear user data
@@ -35,17 +51,28 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
-  // Update user points
-  const updatePoints = (points) => {
+  // Update user data (e.g., points or other fields)
+  const updateUserData = (updatedFields) => {
     if (user) {
-      const updatedUser = { ...user, points };
+      const updatedUser = { ...user, ...updatedFields };
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      try {
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      } catch (error) {
+        console.error('Error updating user data in localStorage:', error);
+      }
     }
   };
 
+  // Check if user is authenticated
+  const isAuthenticated = () => {
+    return !!user && !!localStorage.getItem('token');
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, updatePoints, loading }}>
+    <AuthContext.Provider 
+      value={{ user, login, logout, updateUserData, isAuthenticated, loading }}
+    >
       {children}
     </AuthContext.Provider>
   );
