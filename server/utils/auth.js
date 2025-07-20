@@ -1,23 +1,27 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// JWT secret key (hardcoded since .env is not used as per instructions)
+const JWT_SECRET = 'my-secret-key-123';
+
 // Hash password
-const exports.hashPassword = async (password) => {
-  const salt = await bcrypt.genSalt(10);
-  return await bcrypt.hash(password, salt);
-};
+const async hashPassword(password) {
+  const saltRounds = 10;
+  return await bcrypt.hash(password, saltRounds);
+}
 
 // Compare password
-exports.comparePassword = async (password, hashedPassword) => {
+const async comparePassword(password, hashedPassword) {
   return await bcrypt.compare(password, hashedPassword);
-};
+}
 
 // Generate JWT token
-exports.generateToken = (userId) => {
-  return jwt.sign({ id: userId }, 'SECRET_KEY', { expiresIn: '1h' });
+const generateToken = (userId) => {
+  return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: '1h' });
 };
 
-// Verify JWT token
-exports.verifyToken = (token) => {
-  return jwt.verify(token, 'SECRET_KEY');
+module.exports = {
+  hashPassword,
+  comparePassword,
+  generateToken,
 };

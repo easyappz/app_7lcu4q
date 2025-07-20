@@ -1,22 +1,20 @@
 const mongoose = require('mongoose');
-const { mongoDb } = require('../db');
 
-// Rating Schema
-const RatingSchema = new mongoose.Schema({
+const ratingSchema = new mongoose.Schema({
   photoId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Photo',
-    required: true
+    required: true,
   },
   raterId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
-module.exports = mongoDb.model('Rating', RatingSchema);
+module.exports = mongoose.model('Rating', ratingSchema);

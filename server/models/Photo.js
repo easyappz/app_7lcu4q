@@ -1,34 +1,32 @@
 const mongoose = require('mongoose');
-const { mongoDb } = require('../db');
 
-// Photo Schema
-const PhotoSchema = new mongoose.Schema({
+const photoSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
   },
   filePath: {
     type: String,
-    required: true
+    required: true,
   },
   gender: {
     type: String,
     enum: ['male', 'female', 'other'],
-    required: true
+    required: true,
   },
   age: {
     type: Number,
-    required: true
+    required: true,
   },
   isActive: {
     type: Boolean,
-    default: false
+    default: false,
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
-module.exports = mongoDb.model('Photo', PhotoSchema);
+module.exports = mongoose.model('Photo', photoSchema);

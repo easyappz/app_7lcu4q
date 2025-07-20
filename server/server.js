@@ -2,8 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
-const multer = require('multer');
 const apiRoutes = require('./apiRoutes');
+const { mongoDb } = require('./db');
 
 const app = express();
 
@@ -25,6 +25,12 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}`);
+  try {
+    await mongoDb;
+    console.log('MongoDB connection established');
+  } catch (err) {
+    console.error('Failed to connect to MongoDB', err);
+  }
 });
