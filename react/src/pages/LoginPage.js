@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { instance } from '../api/axios';
 import { useAuth } from '../contexts/AuthContext';
-import { TextField, Button, Box, Typography, Container, Alert, AlertTitle, CircularProgress } from '@mui/material';
+import { TextField, Button, Box, Typography, Container, Alert, AlertTitle, CircularProgress, Paper } from '@mui/material';
+import { LockOutlined } from '@mui/icons-material';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -29,19 +30,34 @@ function LoginPage() {
       let errorMessage = 'Произошла ошибка при входе. Пожалуйста, попробуйте снова.';
       if (err.response) {
         const status = err.response.status;
+        const serverMessage = err.response.data?.message || '';
+        const additionalDetails = err.response.data?.details || '';
+
         if (status === 400) {
           errorMessage = 'Неверный email или пароль. Проверьте введенные данные.';
+          if (serverMessage) {
+            errorMessage = serverMessage;
+          }
+          if (additionalDetails) {
+            errorMessage += ` Дополнительно: ${additionalDetails}`;
+          }
         } else if (status === 401) {
           errorMessage = 'Доступ запрещен. Неверные учетные данные.';
+          if (serverMessage) {
+            errorMessage = serverMessage;
+          }
         } else if (status === 403) {
           errorMessage = 'Доступ запрещен. Ваш аккаунт заблокирован.';
+          if (serverMessage) {
+            errorMessage = serverMessage;
+          }
         } else if (status === 500) {
           errorMessage = 'Внутренняя ошибка сервера. Мы уже работаем над решением проблемы. Пожалуйста, попробуйте позже.';
-          if (err.response.data?.message) {
-            errorMessage += ` Дополнительная информация: ${err.response.data.message}`;
+          if (serverMessage) {
+            errorMessage += ` Дополнительная информация: ${serverMessage}`;
           }
         } else {
-          errorMessage = err.response.data?.message || errorMessage;
+          errorMessage = serverMessage || errorMessage;
         }
       } else if (err.request) {
         errorMessage = 'Ошибка сети. Проверьте ваше подключение к интернету и попробуйте снова.';
@@ -53,18 +69,21 @@ function LoginPage() {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Typography component="h1" variant="h5">
-          Вход
-        </Typography>
+    <Container component="main" maxWidth="sm">
+      <Paper elevation={6} sx={{ marginTop: 10, padding: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', borderRadius: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <LockOutlined sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
+          <Typography component="h1" variant="h5" sx={{ fontWeight: 'bold', mb: 3 }}>
+            Вход
+          </Typography>
+        </Box>
         {error && (
-          <Alert severity="error" sx={{ mt: 2, width: '100%', maxHeight: '200px', overflow: 'auto' }}>
+          <Alert severity="error" sx={{ mt: 2, width: '100%', maxHeight: '200px', overflow: 'auto', borderRadius: 1 }}>
             <AlertTitle>Ошибка</AlertTitle>
             {error}
           </Alert>
         )}
-        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
+        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2, width: '100%' }}>
           <TextField
             margin="normal"
             required
@@ -77,6 +96,7 @@ function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             disabled={isLoading}
             variant="outlined"
+            sx={{ borderRadius: 1 }}
           />
           <TextField
             margin="normal"
@@ -90,12 +110,13 @@ function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             disabled={isLoading}
             variant="outlined"
+            sx={{ borderRadius: 1 }}
           />
           <Button
             type="submit"
             fullWidth
             variant="contained"
-            sx={{ mt: 3, mb: 2, padding: '10px 0' }}
+            sx={{ mt: 3, mb: 2, padding: '12px 0', fontSize: '16px', fontWeight: 'bold', borderRadius: 1 }}
             disabled={isLoading}
             color="primary"
             startIcon={isLoading ? <CircularProgress size={24} /> : null}
@@ -111,7 +132,7 @@ function LoginPage() {
             </Button>
           </Box>
         </Box>
-      </Box>
+      </Paper>
     </Container>
   );
 }
