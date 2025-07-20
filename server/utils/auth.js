@@ -5,13 +5,13 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = 'my-secret-key-123';
 
 // Hash password
-const async hashPassword(password) {
+async function hashPassword(password) {
   const saltRounds = 10;
   return await bcrypt.hash(password, saltRounds);
 }
 
 // Compare password
-const async comparePassword(password, hashedPassword) {
+async function comparePassword(password, hashedPassword) {
   return await bcrypt.compare(password, hashedPassword);
 }
 
