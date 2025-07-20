@@ -37,6 +37,9 @@ function LoginPage() {
           errorMessage = 'Доступ запрещен. Ваш аккаунт заблокирован.';
         } else if (status === 500) {
           errorMessage = 'Внутренняя ошибка сервера. Мы уже работаем над решением проблемы. Пожалуйста, попробуйте позже.';
+          if (err.response.data?.message) {
+            errorMessage += ` Дополнительная информация: ${err.response.data.message}`;
+          }
         } else {
           errorMessage = err.response.data?.message || errorMessage;
         }
@@ -56,7 +59,7 @@ function LoginPage() {
           Вход
         </Typography>
         {error && (
-          <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
+          <Alert severity="error" sx={{ mt: 2, width: '100%', maxHeight: '200px', overflow: 'auto' }}>
             <AlertTitle>Ошибка</AlertTitle>
             {error}
           </Alert>
@@ -95,8 +98,9 @@ function LoginPage() {
             sx={{ mt: 3, mb: 2, padding: '10px 0' }}
             disabled={isLoading}
             color="primary"
+            startIcon={isLoading ? <CircularProgress size={24} /> : null}
           >
-            {isLoading ? <CircularProgress size={24} /> : 'Войти'}
+            {isLoading ? 'Вход...' : 'Войти'}
           </Button>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
             <Button href="/forgot-password" size="small" disabled={isLoading} color="primary">
