@@ -213,6 +213,7 @@ router.post('/photos/rate', authMiddleware, checkDbConnection, async (req, res) 
       throw new Error('Database operation failed during rating check');
     });
     if (existingRating) {
+      console.log('User already rated photo, photoId:', photoId, 'by user:', req.user.id, 'from IP:', req.ip);
       return res.status(400).json({ message: 'You have already rated this photo' });
     }
 
