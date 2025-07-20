@@ -11,7 +11,10 @@ const initializeMongoDB = async () => {
       useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000, // Timeout after 5s if server is not found
       bufferCommands: false, // Disable command buffering when disconnected
-      autoIndex: false // Disable automatic index builds in production for performance
+      autoIndex: false, // Disable automatic index builds in production for performance
+      maxPoolSize: 10, // Limit connection pool size to prevent overload
+      retryWrites: true, // Enable retry for write operations
+      w: 'majority' // Ensure write consistency
     });
     console.log('MongoDB connected successfully');
     return connection;
@@ -30,6 +33,26 @@ mongoose.connection.on('connected', () => {
 
 mongoose.connection.on('disconnected', () => {
   console.warn('MongoDB connection disconnected');
+  // Attempt to reconnect on disconnection
+  console.log('Attempting to reconnect to MongoDB...');
+  setTimeout(async () => {
+    try {
+      await mongoose.connect(MONGO_URI, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        serverSelectionTimeoutMS: 5000,
+        bufferCommands: false,
+        autoIndex: false,
+        maxPoolSize: 10,
+        retryWrites: true,
+        w: 'majority'
+      });
+      console.log('MongoDB reconnected successfully');
+    } catch (err) {
+      console.error('MongoDB reconnection failed:', err.message);
+      console.error('Stack trace:', err.stack);
+    }
+  }, 5000);
 });
 
 mongoose.connection.on('error', (err) => {
@@ -60,7 +83,34 @@ const getConnectionState = () => {
   return states[mongoose.connection.readyState] || 'unknown';
 };
 
+// Function to ensure database connection before executing operations
+const ensureConnection = async () => {
+  if (mongoose.connection.readyState !== 1) {
+    console.warn('Database not connected, attempting to reconnect...');
+    try {
+      await mongoose.connect(MONGO_URI, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        serverSelectionTimeoutMS: 5000,
+        bufferCommands: false,
+        autoIndex: false,
+        maxPoolSize: 10,
+        retryWrites: true,
+        w: 'majority'
+      });
+      console.log('Database reconnected successfully for operation');
+      return true;
+    } catch (err) {
+      console.error('Failed to reconnect database for operation:', err.message);
+      console.error('Stack trace:', err.stack);
+      return false;
+    }
+  }
+  return true;
+};
+
 module.exports = {
   initializeMongoDB,
-  getConnectionState
+  getConnectionState,
+  ensureConnection
 };
