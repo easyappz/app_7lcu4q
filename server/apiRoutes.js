@@ -49,7 +49,7 @@ router.post('/register', async (req, res) => {
     const token = generateToken(user._id);
     res.status(201).json({ token, user: { id: user._id, email: user.email, points: user.points } });
   } catch (error) {
-    console.error('Registration error:', error.message);
+    console.error('Registration error:', error.message, error.stack);
     res.status(500).json({ message: 'Registration failed', error: error.message });
   }
 });
@@ -65,29 +65,29 @@ router.post('/login', async (req, res) => {
 
     console.log('Login attempt for email:', email);
     const user = await User.findOne({ email }).catch(err => {
-      console.error('Database error during user lookup:', err.message);
+      console.error('Database error during user lookup:', err.message, err.stack);
       throw new Error('Database operation failed during user lookup');
     });
     if (!user) {
       console.log('User not found for email:', email);
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Invalid credentials: User not found' });
     }
 
     console.log('User found, comparing passwords for:', email);
     const isMatch = await comparePassword(password, user.password).catch(err => {
-      console.error('Error comparing passwords:', err.message);
+      console.error('Error comparing passwords:', err.message, err.stack);
       throw new Error('Password comparison failed');
     });
     if (!isMatch) {
       console.log('Password mismatch for email:', email);
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Invalid credentials: Password mismatch' });
     }
 
     console.log('Login successful for:', email);
     const token = generateToken(user._id);
     res.json({ token, user: { id: user._id, email: user.email, points: user.points } });
   } catch (error) {
-    console.error('Login error:', error.message);
+    console.error('Login error:', error.message, error.stack);
     res.status(500).json({ message: 'Login failed', error: error.message });
   }
 });
@@ -101,7 +101,7 @@ router.post('/forgot-password', async (req, res) => {
     }
 
     const user = await User.findOne({ email }).catch(err => {
-      console.error('Database error during forgot password:', err.message);
+      console.error('Database error during forgot password:', err.message, err.stack);
       throw new Error('Database operation failed during forgot password');
     });
     if (!user) {
@@ -111,7 +111,7 @@ router.post('/forgot-password', async (req, res) => {
     // In a real app, send a reset link via email. Here, we just return a message.
     res.json({ message: 'Password reset link has been sent to your email' });
   } catch (error) {
-    console.error('Password reset error:', error.message);
+    console.error('Password reset error:', error.message, error.stack);
     res.status(500).json({ message: 'Password reset failed', error: error.message });
   }
 });
@@ -135,13 +135,13 @@ router.post('/photos/upload', authMiddleware, uploadMiddleware.single('photo'), 
       age: parseInt(age, 10)
     });
     await photo.save().catch(err => {
-      console.error('Database error during photo save:', err.message);
+      console.error('Database error during photo save:', err.message, err.stack);
       throw new Error('Database operation failed during photo save');
     });
 
     res.status(201).json({ photo });
   } catch (error) {
-    console.error('Photo upload error:', error.message);
+    console.error('Photo upload error:', error.message, error.stack);
     res.status(500).json({ message: 'Photo upload failed', error: error.message });
   }
 });
@@ -163,12 +163,12 @@ router.get('/photos/to-rate', authMiddleware, async (req, res) => {
     }
 
     const photos = await Photo.find(query).limit(1).catch(err => {
-      console.error('Database error during photo fetch:', err.message);
+      console.error('Database error during photo fetch:', err.message, err.stack);
       throw new Error('Database operation failed during photo fetch');
     });
     res.json({ photos });
   } catch (error) {
-    console.error('Fetch photos error:', error.message);
+    console.error('Fetch photos error:', error.message, error.stack);
     res.status(500).json({ message: 'Failed to fetch photos', error: error.message });
   }
 });
@@ -182,7 +182,7 @@ router.post('/photos/rate', authMiddleware, async (req, res) => {
     }
 
     const photo = await Photo.findById(photoId).catch(err => {
-      console.error('Database error during photo lookup:', err.message);
+      console.error('Database error during photo lookup:', err.message, err.stack);
       throw new Error('Database operation failed during photo lookup');
     });
     if (!photo) {
@@ -194,7 +194,7 @@ router.post('/photos/rate', authMiddleware, async (req, res) => {
     }
 
     const existingRating = await Rating.findOne({ photoId, raterId: req.user.id }).catch(err => {
-      console.error('Database error during rating check:', err.message);
+      console.error('Database error during rating check:', err.message, err.stack);
       throw new Error('Database operation failed during rating check');
     });
     if (existingRating) {
@@ -204,23 +204,23 @@ router.post('/photos/rate', authMiddleware, async (req, res) => {
     // Add rating
     const rating = new Rating({ photoId, raterId: req.user.id });
     await rating.save().catch(err => {
-      console.error('Database error during rating save:', err.message);
+      console.error('Database error during rating save:', err.message, err.stack);
       throw new Error('Database operation failed during rating save');
     });
 
     // Update points: +1 for rater, -1 for photo owner
     await User.findByIdAndUpdate(req.user.id, { $inc: { points: 1 } }).catch(err => {
-      console.error('Database error during rater points update:', err.message);
+      console.error('Database error during rater points update:', err.message, err.stack);
       throw new Error('Database operation failed during rater points update');
     });
     await User.findByIdAndUpdate(photo.userId, { $inc: { points: -1 } }).catch(err => {
-      console.error('Database error during owner points update:', err.message);
+      console.error('Database error during owner points update:', err.message, err.stack);
       throw new Error('Database operation failed during owner points update');
     });
 
     res.json({ message: 'Photo rated successfully' });
   } catch (error) {
-    console.error('Rating error:', error.message);
+    console.error('Rating error:', error.message, error.stack);
     res.status(500).json({ message: 'Rating failed', error: error.message });
   }
 });
@@ -234,7 +234,7 @@ router.post('/photos/toggle-active', authMiddleware, async (req, res) => {
     }
 
     const user = await User.findById(req.user.id).catch(err => {
-      console.error('Database error during user lookup:', err.message);
+      console.error('Database error during user lookup:', err.message, err.stack);
       throw new Error('Database operation failed during user lookup');
     });
     if (user.points <= 0 && isActive) {
@@ -242,7 +242,7 @@ router.post('/photos/toggle-active', authMiddleware, async (req, res) => {
     }
 
     const photo = await Photo.findOne({ _id: photoId, userId: req.user.id }).catch(err => {
-      console.error('Database error during photo lookup:', err.message);
+      console.error('Database error during photo lookup:', err.message, err.stack);
       throw new Error('Database operation failed during photo lookup');
     });
     if (!photo) {
@@ -251,13 +251,13 @@ router.post('/photos/toggle-active', authMiddleware, async (req, res) => {
 
     photo.isActive = isActive;
     await photo.save().catch(err => {
-      console.error('Database error during photo update:', err.message);
+      console.error('Database error during photo update:', err.message, err.stack);
       throw new Error('Database operation failed during photo update');
     });
 
     res.json({ message: 'Photo status updated', photo });
   } catch (error) {
-    console.error('Toggle photo status error:', error.message);
+    console.error('Toggle photo status error:', error.message, error.stack);
     res.status(500).json({ message: 'Failed to update photo status', error: error.message });
   }
 });
@@ -266,12 +266,12 @@ router.post('/photos/toggle-active', authMiddleware, async (req, res) => {
 router.get('/photos/my-photos', authMiddleware, async (req, res) => {
   try {
     const photos = await Photo.find({ userId: req.user.id }).catch(err => {
-      console.error('Database error during user photos fetch:', err.message);
+      console.error('Database error during user photos fetch:', err.message, err.stack);
       throw new Error('Database operation failed during user photos fetch');
     });
     res.json({ photos });
   } catch (error) {
-    console.error('Fetch user photos error:', error.message);
+    console.error('Fetch user photos error:', error.message, error.stack);
     res.status(500).json({ message: 'Failed to fetch user photos', error: error.message });
   }
 });
@@ -281,7 +281,7 @@ router.get('/stats/photo/:id', authMiddleware, async (req, res) => {
   try {
     const photoId = req.params.id;
     const photo = await Photo.findOne({ _id: photoId, userId: req.user.id }).catch(err => {
-      console.error('Database error during photo lookup:', err.message);
+      console.error('Database error during photo lookup:', err.message, err.stack);
       throw new Error('Database operation failed during photo lookup');
     });
     if (!photo) {
@@ -289,7 +289,7 @@ router.get('/stats/photo/:id', authMiddleware, async (req, res) => {
     }
 
     const ratings = await Rating.find({ photoId }).populate('raterId').catch(err => {
-      console.error('Database error during ratings fetch:', err.message);
+      console.error('Database error during ratings fetch:', err.message, err.stack);
       throw new Error('Database operation failed during ratings fetch');
     });
     const stats = {
@@ -300,7 +300,7 @@ router.get('/stats/photo/:id', authMiddleware, async (req, res) => {
 
     for (const rating of ratings) {
       const raterPhoto = await Photo.findOne({ userId: rating.raterId._id }).catch(err => {
-        console.error('Database error during rater photo lookup:', err.message);
+        console.error('Database error during rater photo lookup:', err.message, err.stack);
         return null;
       });
       if (raterPhoto) {
@@ -313,7 +313,7 @@ router.get('/stats/photo/:id', authMiddleware, async (req, res) => {
 
     res.json({ stats });
   } catch (error) {
-    console.error('Fetch stats error:', error.message);
+    console.error('Fetch stats error:', error.message, error.stack);
     res.status(500).json({ message: 'Failed to fetch stats', error: error.message });
   }
 });
