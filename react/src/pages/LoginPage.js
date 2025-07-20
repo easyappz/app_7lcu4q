@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { instance } from '../api/axios';
 import { useAuth } from '../contexts/AuthContext';
-import { TextField, Button, Box, Typography, Container, Alert, AlertTitle } from '@mui/material';
+import { TextField, Button, Box, Typography, Container, Alert, AlertTitle, CircularProgress } from '@mui/material';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -33,13 +33,15 @@ function LoginPage() {
           errorMessage = 'Неверный email или пароль. Проверьте введенные данные.';
         } else if (status === 401) {
           errorMessage = 'Доступ запрещен. Неверные учетные данные.';
+        } else if (status === 403) {
+          errorMessage = 'Доступ запрещен. Ваш аккаунт заблокирован.';
         } else if (status === 500) {
-          errorMessage = 'Ошибка сервера. Пожалуйста, попробуйте позже.';
+          errorMessage = 'Внутренняя ошибка сервера. Мы уже работаем над решением проблемы. Пожалуйста, попробуйте позже.';
         } else {
           errorMessage = err.response.data?.message || errorMessage;
         }
       } else if (err.request) {
-        errorMessage = 'Ошибка сети. Проверьте подключение к интернету.';
+        errorMessage = 'Ошибка сети. Проверьте ваше подключение к интернету и попробуйте снова.';
       }
       setError(errorMessage);
     } finally {
@@ -71,6 +73,7 @@ function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={isLoading}
+            variant="outlined"
           />
           <TextField
             margin="normal"
@@ -83,21 +86,23 @@ function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={isLoading}
+            variant="outlined"
           />
           <Button
             type="submit"
             fullWidth
             variant="contained"
-            sx={{ mt: 3, mb: 2 }}
+            sx={{ mt: 3, mb: 2, padding: '10px 0' }}
             disabled={isLoading}
+            color="primary"
           >
-            {isLoading ? 'Вход...' : 'Войти'}
+            {isLoading ? <CircularProgress size={24} /> : 'Войти'}
           </Button>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-            <Button href="/forgot-password" size="small" disabled={isLoading}>
+            <Button href="/forgot-password" size="small" disabled={isLoading} color="primary">
               Забыли пароль?
             </Button>
-            <Button href="/register" size="small" disabled={isLoading}>
+            <Button href="/register" size="small" disabled={isLoading} color="primary">
               Регистрация
             </Button>
           </Box>
