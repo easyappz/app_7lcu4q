@@ -11,6 +11,7 @@ import UploadPhotoPage from './pages/UploadPhotoPage';
 import RatePhotosPage from './pages/RatePhotosPage';
 import MyStatsPage from './pages/MyStatsPage';
 import Layout from './components/Layout';
+import { AuthProvider } from './contexts/AuthContext';
 
 const queryClient = new QueryClient();
 
@@ -34,19 +35,21 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <Router>
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<LoginPage />} />
-                <Route path="login" element={<LoginPage />} />
-                <Route path="register" element={<RegisterPage />} />
-                <Route path="forgot-password" element={<ForgotPasswordPage />} />
-                <Route path="upload" element={<UploadPhotoPage />} />
-                <Route path="rate" element={<RatePhotosPage />} />
-                <Route path="stats" element={<MyStatsPage />} />
-              </Route>
-            </Routes>
-          </Router>
+          <AuthProvider>
+            <Router>
+              <Routes>
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<LoginPage />} />
+                  <Route path="login" element={<LoginPage />} />
+                  <Route path="register" element={<RegisterPage />} />
+                  <Route path="forgot-password" element={<ForgotPasswordPage />} />
+                  <Route path="upload" element={<UploadPhotoPage />} />
+                  <Route path="rate" element={<RatePhotosPage />} />
+                  <Route path="stats" element={<MyStatsPage />} />
+                </Route>
+              </Routes>
+            </Router>
+          </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>

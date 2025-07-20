@@ -1,163 +1,147 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Button, Alert, MenuItem, Select, FormControl, InputLabel, TextField, Grid, Card, CardMedia, CardContent } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { instance } from '../api/axios';
+import { useAuth } from '../contexts/AuthContext';
+import { Box, Typography, Button, Card, CardMedia, CardContent, FormControl, InputLabel, Select, MenuItem, TextField, Grid, Alert } from '@mui/material';
 
 function RatePhotosPage() {
-  const [photos, setPhotos] = useState([]);
-  const [gender, setGender] = useState('');
-  const [minAge, setMinAge] = useState('');
-  const [maxAge, setMaxAge] = useState('');
+  const { user, updatePoints } = useAuth();
+  const navigate = useNavigate();
+  const [photo, setPhoto] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [filters, setFilters] = useState({
+    gender: '',
+    minAge: '',
+    maxAge: ''
+  });
 
-  const fetchPhotos = async () => {
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    fetchPhoto();
+  }, [user, navigate, filters]);
+
+  const fetchPhoto = async () => {
+    setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
-      const params = { gender, minAge, maxAge };
       const response = await instance.get('/api/photos/to-rate', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        params,
+        params: filters
       });
-      setPhotos(response.data.photos);
+      if (response.data.photos.length > 0) {
+        setPhoto(response.data.photos[0]);
+      } else {
+        setPhoto(null);
+        setError('Нет фотографий для оценки с заданными фильтрами');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Ошибка при загрузке фото');
+      setError('Ошибка загрузки фотографии');
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchPhotos();
-  }, []);
-
-  const handleFilterSubmit = (e) => {
-    e.preventDefault();
-    fetchPhotos();
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleRate = async (photoId) => {
-    setError('');
-    setSuccess('');
+  const handleRate = async () => {
+    if (!photo) return;
     try {
-      const token = localStorage.getItem('token');
-      await instance.post('/api/photos/rate', { photoId }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      setSuccess('Фото оценено!');
-      fetchPhotos();
+      await instance.post('/api/photos/rate', { photoId: photo._id });
+      // Update user points (+1 for rating)
+      updatePoints(user.points + 1);
+      // Fetch new photo
+      fetchPhoto();
     } catch (err) {
-      setError(err.response?.data?.message || 'Ошибка при оценке фото');
+      setError(err.response?.data?.message || 'Ошибка при оценке фотографии');
     }
   };
 
   return (
-    <Container component="main" maxWidth="md">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Typography component="h1" variant="h5">
-          Оценка фотографий
+    <Box sx={{ mt: 4 }}>
+      <Typography variant="h4" gutterBottom>
+        Оценить фотографии
+      </Typography>
+      <Typography variant="h6" gutterBottom>
+        Текущие баллы: {user?.points || 0}
+      </Typography>
+
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          Фильтры
         </Typography>
-        {error && (
-          <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
-            {error}
-          </Alert>
-        )}
-        {success && (
-          <Alert severity="success" sx={{ mt: 2, width: '100%' }}>
-            {success}
-          </Alert>
-        )}
-        <Box component="form" onSubmit={handleFilterSubmit} sx={{ mt: 3, mb: 3, width: '100%' }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Пол</InputLabel>
-                <Select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                  label="Пол"
-                >
-                  <MenuItem value="">Все</MenuItem>
-                  <MenuItem value="male">Мужской</MenuItem>
-                  <MenuItem value="female">Женский</MenuItem>
-                  <MenuItem value="other">Другой</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                margin="normal"
-                label="Минимальный возраст"
-                name="minAge"
-                type="number"
-                value={minAge}
-                onChange={(e) => setMinAge(e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                margin="normal"
-                label="Максимальный возраст"
-                name="maxAge"
-                type="number"
-                value={maxAge}
-                onChange={(e) => setMaxAge(e.target.value)}
-              />
-            </Grid>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Пол</InputLabel>
+              <Select
+                name="gender"
+                value={filters.gender}
+                onChange={handleFilterChange}
+                label="Пол"
+              >
+                <MenuItem value="">Все</MenuItem>
+                <MenuItem value="male">Мужской</MenuItem>
+                <MenuItem value="female">Женский</MenuItem>
+                <MenuItem value="other">Другое</MenuItem>
+              </Select>
+            </FormControl>
           </Grid>
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 2 }}
-          >
-            Применить фильтры
-          </Button>
-        </Box>
-        <Box sx={{ width: '100%', mt: 3 }}>
-          {photos.length > 0 ? (
-            photos.map((photo) => (
-              <Card key={photo._id} sx={{ maxWidth: 345, margin: 'auto', mb: 2 }}>
-                <CardMedia
-                  component="img"
-                  height="300"
-                  image={photo.filePath}
-                  alt="Фото для оценки"
-                />
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary">
-                    Возраст: {photo.age}, Пол: {photo.gender === 'male' ? 'Мужской' : photo.gender === 'female' ? 'Женский' : 'Другой'}
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    sx={{ mt: 2 }}
-                    onClick={() => handleRate(photo._id)}
-                  >
-                    Оценить
-                  </Button>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <Typography variant="body1" align="center">
-              Нет фотографий для оценки.
-            </Typography>
-          )}
-        </Box>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              margin="normal"
+              label="Минимальный возраст"
+              name="minAge"
+              type="number"
+              value={filters.minAge}
+              onChange={handleFilterChange}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              margin="normal"
+              label="Максимальный возраст"
+              name="maxAge"
+              type="number"
+              value={filters.maxAge}
+              onChange={handleFilterChange}
+            />
+          </Grid>
+        </Grid>
       </Box>
-    </Container>
+
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      {loading ? (
+        <Typography>Загрузка...</Typography>
+      ) : photo ? (
+        <Card sx={{ maxWidth: 500, margin: '0 auto' }}>
+          <CardMedia
+            component="img"
+            height="400"
+            image={photo.filePath}
+            alt="Фото для оценки"
+          />
+          <CardContent>
+            <Typography gutterBottom variant="h5" component="div">
+              Возраст: {photo.age}, Пол: {photo.gender}
+            </Typography>
+            <Button variant="contained" color="primary" onClick={handleRate}>
+              Оценить (+1 балл)
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Typography>Фотографии для оценки не найдены.</Typography>
+      )}
+    </Box>
   );
 }
 
