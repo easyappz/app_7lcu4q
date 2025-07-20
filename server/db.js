@@ -10,9 +10,6 @@ const initializeMongoDB = async () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000, // Timeout after 5s if server is not found
-      autoReconnect: true, // Automatically attempt to reconnect
-      reconnectTries: Number.MAX_VALUE, // Retry indefinitely
-      reconnectInterval: 1000, // Wait 1s between retries
       bufferCommands: false, // Disable command buffering when disconnected
       autoIndex: false // Disable automatic index builds in production for performance
     });
