@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { instance } from '../api/axios';
 import { useAuth } from '../contexts/AuthContext';
-import { Box, Typography, Button, Card, CardMedia, CardContent, FormControl, InputLabel, Select, MenuItem, TextField, Grid, Alert } from '@mui/material';
+import { Box, Typography, Button, Card, CardMedia, CardContent, FormControl, InputLabel, Select, MenuItem, TextField, Grid, Alert, Snackbar } from '@mui/material';
 
 function RatePhotosPage() {
   const { user, updatePoints } = useAuth();
@@ -10,6 +10,12 @@ function RatePhotosPage() {
   const [photo, setPhoto] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'error'
+  });
+  const [ratedPhotos, setRatedPhotos] = useState(new Set());
   const [filters, setFilters] = useState({
     gender: '',
     minAge: '',
@@ -32,7 +38,16 @@ function RatePhotosPage() {
         params: filters
       });
       if (response.data.photos.length > 0) {
-        setPhoto(response.data.photos[0]);
+        const newPhoto = response.data.photos[0];
+        setPhoto(newPhoto);
+        // Check if this photo was already rated in the current session
+        if (ratedPhotos.has(newPhoto._id)) {
+          setSnackbar({
+            open: true,
+            message: 'Вы уже оценили эту фотографию',
+            severity: 'info'
+          });
+        }
       } else {
         setPhoto(null);
         setError('Нет фотографий для оценки с заданными фильтрами');
@@ -50,29 +65,62 @@ function RatePhotosPage() {
   };
 
   const handleRate = async () => {
-    if (!photo) return;
+    if (!photo || ratedPhotos.has(photo._id)) {
+      setSnackbar({
+        open: true,
+        message: 'Вы уже оценили эту фотографию',
+        severity: 'info'
+      });
+      return;
+    }
     try {
       await instance.post('/api/photos/rate', { photoId: photo._id });
       // Update user points (+1 for rating)
       updatePoints(user.points + 1);
+      // Mark photo as rated in the current session
+      setRatedPhotos((prev) => new Set(prev).add(photo._id));
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: 'Оценка учтена! +1 балл',
+        severity: 'success'
+      });
       // Fetch new photo
       fetchPhoto();
     } catch (err) {
-      setError(err.response?.data?.message || 'Ошибка при оценке фотографии');
+      const errorMessage = err.response?.data?.message || 'Ошибка при оценке фотографии';
+      if (err.response?.status === 400 && errorMessage.includes('already rated')) {
+        setSnackbar({
+          open: true,
+          message: 'Вы уже оценили эту фотографию',
+          severity: 'info'
+        });
+        setRatedPhotos((prev) => new Set(prev).add(photo._id));
+      } else {
+        setSnackbar({
+          open: true,
+          message: errorMessage,
+          severity: 'error'
+        });
+      }
     }
   };
 
+  const handleSnackbarClose = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
   return (
-    <Box sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
+    <Box sx={{ mt: 4, px: { xs: 2, sm: 0 } }}>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
         Оценить фотографии
       </Typography>
-      <Typography variant="h6" gutterBottom>
+      <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
         Текущие баллы: {user?.points || 0}
       </Typography>
 
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h6" gutterBottom>
+      <Box sx={{ mb: 4, p: 3, backgroundColor: 'background.paper', borderRadius: 2, boxShadow: 1 }}>
+        <Typography variant="h6" gutterBottom sx={{ mb: 2, fontWeight: 'bold' }}>
           Фильтры
         </Typography>
         <Grid container spacing={2}>
@@ -84,6 +132,7 @@ function RatePhotosPage() {
                 value={filters.gender}
                 onChange={handleFilterChange}
                 label="Пол"
+                sx={{ borderRadius: 1 }}
               >
                 <MenuItem value="">Все</MenuItem>
                 <MenuItem value="male">Мужской</MenuItem>
@@ -101,6 +150,7 @@ function RatePhotosPage() {
               type="number"
               value={filters.minAge}
               onChange={handleFilterChange}
+              sx={{ borderRadius: 1 }}
             />
           </Grid>
           <Grid item xs={12} sm={4}>
@@ -112,35 +162,56 @@ function RatePhotosPage() {
               type="number"
               value={filters.maxAge}
               onChange={handleFilterChange}
+              sx={{ borderRadius: 1 }}
             />
           </Grid>
         </Grid>
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 1 }}>{error}</Alert>}
 
       {loading ? (
-        <Typography>Загрузка...</Typography>
+        <Typography sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>Загрузка...</Typography>
       ) : photo ? (
-        <Card sx={{ maxWidth: 500, margin: '0 auto' }}>
+        <Card sx={{ maxWidth: 500, margin: '0 auto', borderRadius: 3, boxShadow: 3 }}>
           <CardMedia
             component="img"
             height="400"
             image={photo.filePath}
             alt="Фото для оценки"
+            sx={{ objectFit: 'cover', borderTopLeftRadius: 3, borderTopRightRadius: 3 }}
           />
-          <CardContent>
-            <Typography gutterBottom variant="h5" component="div">
+          <CardContent sx={{ p: 3 }}>
+            <Typography gutterBottom variant="h6" component="div" sx={{ color: 'text.primary' }}>
               Возраст: {photo.age}, Пол: {photo.gender}
             </Typography>
-            <Button variant="contained" color="primary" onClick={handleRate}>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleRate} 
+              disabled={ratedPhotos.has(photo._id)}
+              sx={{ mt: 2, borderRadius: 1, textTransform: 'none', fontSize: '1rem', px: 4 }}
+            >
               Оценить (+1 балл)
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <Typography>Фотографии для оценки не найдены.</Typography>
+        <Typography sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+          Фотографии для оценки не найдены.
+        </Typography>
       )}
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%', borderRadius: 1 }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
