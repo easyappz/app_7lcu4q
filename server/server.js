@@ -20,7 +20,7 @@ app.use('/api', apiRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Server error:', err.message);
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
@@ -31,26 +31,26 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// Check MongoDB connection status
+// Log MongoDB connection status on startup
 mongoDb
   .then(() => {
-    console.log('MongoDB connection established');
+    console.log('MongoDB connection initialized');
   })
   .catch((err) => {
-    console.error('Failed to connect to MongoDB:', err);
+    console.error('Failed to initialize MongoDB connection:', err.message);
   });
 
 // Add a health check endpoint to verify server and DB status
 app.get('/api/health', async (req, res) => {
   try {
-    const dbState = mongoDb.readyState === 1 ? 'connected' : 'disconnected';
+    const dbState = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
     res.status(200).json({
       status: 'ok',
       database: dbState,
       message: dbState === 'connected' ? 'Database is connected' : 'Database connection failed'
     });
   } catch (error) {
-    console.error('Health check error:', error);
+    console.error('Health check error:', error.message);
     res.status(503).json({
       status: 'error',
       database: 'disconnected',
