@@ -40,6 +40,7 @@ router.post('/register', async (req, res) => {
     const token = generateToken(user._id);
     res.status(201).json({ token, user: { id: user._id, email: user.email, points: user.points } });
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(500).json({ message: 'Registration failed', error: error.message });
   }
 });
@@ -65,6 +66,7 @@ router.post('/login', async (req, res) => {
     const token = generateToken(user._id);
     res.json({ token, user: { id: user._id, email: user.email, points: user.points } });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Login failed', error: error.message });
   }
 });
@@ -85,6 +87,7 @@ router.post('/forgot-password', async (req, res) => {
     // In a real app, send a reset link via email. Here, we just return a message.
     res.json({ message: 'Password reset link has been sent to your email' });
   } catch (error) {
+    console.error('Password reset error:', error);
     res.status(500).json({ message: 'Password reset failed', error: error.message });
   }
 });
@@ -111,6 +114,7 @@ router.post('/photos/upload', authMiddleware, uploadMiddleware.single('photo'), 
 
     res.status(201).json({ photo });
   } catch (error) {
+    console.error('Photo upload error:', error);
     res.status(500).json({ message: 'Photo upload failed', error: error.message });
   }
 });
@@ -134,6 +138,7 @@ router.get('/photos/to-rate', authMiddleware, async (req, res) => {
     const photos = await Photo.find(query).limit(1);
     res.json({ photos });
   } catch (error) {
+    console.error('Fetch photos error:', error);
     res.status(500).json({ message: 'Failed to fetch photos', error: error.message });
   }
 });
@@ -170,6 +175,7 @@ router.post('/photos/rate', authMiddleware, async (req, res) => {
 
     res.json({ message: 'Photo rated successfully' });
   } catch (error) {
+    console.error('Rating error:', error);
     res.status(500).json({ message: 'Rating failed', error: error.message });
   }
 });
@@ -197,6 +203,7 @@ router.post('/photos/toggle-active', authMiddleware, async (req, res) => {
 
     res.json({ message: 'Photo status updated', photo });
   } catch (error) {
+    console.error('Toggle photo status error:', error);
     res.status(500).json({ message: 'Failed to update photo status', error: error.message });
   }
 });
@@ -207,6 +214,7 @@ router.get('/photos/my-photos', authMiddleware, async (req, res) => {
     const photos = await Photo.find({ userId: req.user.id });
     res.json({ photos });
   } catch (error) {
+    console.error('Fetch user photos error:', error);
     res.status(500).json({ message: 'Failed to fetch user photos', error: error.message });
   }
 });
@@ -239,6 +247,7 @@ router.get('/stats/photo/:id', authMiddleware, async (req, res) => {
 
     res.json({ stats });
   } catch (error) {
+    console.error('Fetch stats error:', error);
     res.status(500).json({ message: 'Failed to fetch stats', error: error.message });
   }
 });
