@@ -25,12 +25,36 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, async () => {
+
+// Start server regardless of MongoDB connection status
+app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-  try {
-    await mongoDb;
+});
+
+// Check MongoDB connection status
+mongoDb
+  .then(() => {
     console.log('MongoDB connection established');
-  } catch (err) {
-    console.error('Failed to connect to MongoDB', err);
+  })
+  .catch((err) => {
+    console.error('Failed to connect to MongoDB:', err);
+  });
+
+// Add a health check endpoint to verify server and DB status
+app.get('/api/health', async (req, res) => {
+  try {
+    const dbState = mongoDb.readyState === 1 ? 'connected' : 'disconnected';
+    res.status(200).json({
+      status: 'ok',
+      database: dbState,
+      message: dbState === 'connected' ? 'Database is connected' : 'Database connection failed'
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(503).json({
+      status: 'error',
+      database: 'disconnected',
+      message: 'Service unavailable'
+    });
   }
 });
